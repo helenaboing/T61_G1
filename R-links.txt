@@ -1,0 +1,13 @@
+https://r-graph-gallery.com/
+
+https://www.tidyverse.org/packages/
+
+https://rmarkdown.rstudio.com/
+
+https://quarto.org/
+
+https://slidescience.co/action-titles/
+
+https://pkgs.rstudio.com/flexdashboard/
+
+https://shiny.posit.co/
