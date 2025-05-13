@@ -1,0 +1,51 @@
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+.RDataTmp
+.Ruserdata
+
+# User-specific files
+.Rproj.user/
+.Rprofile
+.Renviron
+
+# RStudio files
+.Rproj.user/
+.Rproj.user/*
+.Rproj.user/*/*
+.Rproj.user/*/*/*
+
+# Quarto files
+*_cache/
+*_files/
+*.html
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Data files
+*.rda
+*.Rda
+*.RData
+*.rds
+
+# Log files
+*.log
+
+# Output files
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg

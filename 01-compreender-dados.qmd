@@ -1,0 +1,217 @@
+---
+title: "Dicionário de dados"
+author: ["Helena Boing", "Alejandra Moreira", "Joana Costa", "Lohanna Pombo", "Pedro Sequeira"]
+date: today
+lang: pt
+format:
+    html:
+     toc: true
+     toc-depth: 2
+     theme: darkly
+     number-sections: true
+---
+
+# Descrição do *snowflake*
+ 
+Os dados estão organizados numa estrutura *snowflake*.
+
+-  Dimensões 
+  -  *Customers*
+  -  *Geography*
+  -  *Products*
+  -  *ProductCategory*
+  -  *ProductSubCategory*
+  -  *Territory*
+  -  *Calendar*
+  -  *factSales*
+
+# Transformações e Limpeza de Dados
+
+Esta seção documenta todas as transformações e operações de limpeza realizadas nos dados originais. Inclui campos removidos por serem desnecessários para análise, transformações de tipos de dados para garantir consistência, e a criação de novas variáveis para enriquecer a análise. A estrutura final da tabela (dfinal) representa o conjunto de dados otimizado para análise de vendas, comportamento do cliente e desempenho de produtos.
+
+## Campos Removidos
+- **Customers**: Name, AddressLine, Phone (dados pessoais desnecessários)
+- **Geography**: SpanishCountryRegionName, FrenchCountryRegionName, PostalCode, IpAddressLocator (informações redundantes ou desnecessárias)
+- **Products**: SubCategory, Category (redundantes com as tabelas de categoria)
+- **ProductCategory**: SpanishProductCategoryName, FrenchProductCategoryName (mantido apenas inglês)
+- **ProductSubCategory**: SpanishProductSubcategoryName, FrenchProductSubcategoryName (mantido apenas inglês)
+
+## Campos Transformados
+### Customers
+- **MaritalStatus**: Transformado em fator com níveis "Casado", "Solteiro"
+- **HouseOwnerFlag**: Transformado em fator com níveis "Não é proprietário", "É proprietário"
+- **BirthDate**: Convertido para tipo date
+- **DateFirstPurchase**: Convertido para tipo date
+- **Idade**: Calculado a partir de BirthDate (data de referência: 2025-04-23)
+- **TipoCliente**: Nova variável categórica baseada em YearlyIncome
+  - Baixo: < 30,000
+  - Médio: 30,000 - 60,000
+  - Alto: > 60,000
+
+### Geography
+- **EnglishCountryRegionName**: Renomeado para CountryRegionName
+
+### Products
+- **StartDate**: Convertido para tipo date
+- **EndDate**: Convertido para tipo date
+
+### ProductCategory
+- **EnglishProductCategoryName**: Renomeado para ProductCategoryName
+
+### ProductSubCategory
+- **EnglishProductSubcategoryName**: Renomeado para ProductSubcategoryName
+
+### factSales
+- **OrderDate**: Convertido para tipo date
+
+## Estrutura Final (dfinal)
+A tabela final (dfinal) contém as seguintes seções de dados:
+
+### Informações da Venda
+- OrderDate (date)
+- SalesOrderNumber (character)
+- SalesOrderLineNumber (numeric)
+- OrderQuantity (numeric)
+- UnitPrice (numeric)
+- SalesAmount (numeric)
+- TaxAmt (numeric)
+- Freight (numeric)
+
+### Informações do Produto
+- ProductKey (numeric)
+- ProductName (character)
+- ProductSubCategoryKey (numeric)
+- ProductSubcategoryName (character)
+- ProductCategoryKey (numeric)
+- ProductCategoryName (character)
+- StandardCost (numeric)
+- Color (character)
+- Size (numeric)
+- Class (character)
+- ModelName (character)
+
+### Informações do Cliente
+- CustomerKey (numeric)
+- BirthDate (date)
+- MaritalStatus (factor)
+- Gender (character)
+- YearlyIncome (numeric)
+- NumberChildrenAtHome (numeric)
+- Occupation (character)
+- HouseOwnerFlag (factor)
+- NumberCarsOwned (numeric)
+- DateFirstPurchase (date)
+- Idade (numeric)
+- TipoCliente (factor)
+
+### Informações Geográficas
+- City (character)
+- StateProvinceName (character)
+- CountryRegionName (character)
+- Region (character)
+- Country (character)
+- Group (character)
+
+# Dimensões
+
+Esta seção descreve a estrutura original do banco de dados, apresentando todas as tabelas dimensionais e suas relações. Cada dimensão contém atributos descritivos que permitem analisar os dados de vendas sob diferentes perspectivas. As dimensões são conectadas através de chaves primárias (PK) e estrangeiras (FK), formando uma estrutura em snowflake que facilita consultas complexas e análises multidimensionais.
+
+## Customers
+- CustomerKey: _PK_ Chave primária da dimensão (numeric)
+- GeographyKey: _FK_ Chave estrangeira da dimensão (numeric)
+- Name: Nome do consumidor (character)
+- BirthDate: Data de nascimento do consumidor (date)
+- MaritalStatus: Estado civil do consumidor (character)
+- Gender: Gênero do consumidor (character)
+- YearlyIncome: Renda anual do consumidor (numeric)
+- Occupation: Ocupação/Profissão do consumidor (character)
+- HouseOwnerFlag: Indicador se o consumidor é proprietário de casa (numeric)
+- NumberChildrenAtHome: Número de filhos ou crianças que moram com o cliente (numeric)
+- NumberCarsOwned: Número de carros que o consumidor possui (numeric)
+- AddressLine: Endereço do cliente (character)
+- Phone: Número de telefone do consumidor (character)
+- DateFirstPurchase: Data da primeira compra realizada (date)
+
+## Geography 
+- GeographyKey: _PK_ Indica a localização geográfica (numeric)
+- City: Cidade associada ao endereço ou localização do cliente (character)
+- StateProvinceCode: Código da província ou estado (character)
+- StateProvinceName: Nome da província ou estado (character)
+- CountryRegionCode: Código do país ou região (character)
+- EnglishCountryRegionName: Nome do país/região em inglês (character)
+- SpanishCountryRegionName: Nome do país/região em espanhol (character)
+- FrenchCountryRegionName: Nome do país/região em francês (character)
+- PostalCode: Código postal (character)
+- SalesTerritoryKey: _FK_ Chave de território de vendas (numeric)
+- IpAddressLocator: Identificador usado para determinar a localização geográfica com base em endereço IP (character)
+
+## Products
+- ProductKey: _PK_ Chave primária da dimensão (numeric)
+- ProductSubCategoryKey: _FK_ Chave estrangeira da dimensão (numeric)
+- ProductName: Nome do produto (character)
+- StandardCost: Preço padrão do produto (numeric)
+- Color: Cor do produto (character)
+- SafetyStockLevel: Nível de estoque de segurança (numeric)
+- ListPrice: Preço de lista (numeric)
+- Size: Tamanho do produto (character)
+- DaysToManufacture: Dias para produção (numeric)
+- DealerPrice: Preço de revendedor (numeric)
+- Class: Classe do produto (character)
+- ModelName: Nome do modelo (character)
+- Description: Descrição do produto (character)
+- Status: Estado do produto (character)
+- SubCategory: Sub categoria (character)
+- Category: Categoria (character)
+- StartDate: Data de ínicio (numeric) ??? 
+- EndDate: Date final (numeric) ???
+
+## ProductCategory 
+- ProductCategoryKey: _PK_ Chave primária da dimensão (numeric)
+- EnglishProductCategoryName: Nome da categoria em inglês (character)
+- SpanishProductCategoryName: Nome da categoria em espanhol (character)
+- FrenchProductCategoryName: Nome da categoria em francês (character)
+  
+## ProductSubCategory
+- ProductCategoryKey: _FK_ Chave estrangeira da dimensão (numeric)
+- ProductSubcategoryKey: _PK_ Chave primária da dimensão (numeric)
+- EnglishProductSubcategoryName: Nome da subcategoria em inglês (character)
+- SpanishProductSubcategoryName: Nome da subcategoria em espanhol (character)
+- FrenchProductSubcategoryName: Nome da subcategoria em francês (character)
+
+## Territory
+- TerritoryKey: _PK_ Chave primária da dimensão (numeric)
+- Region: Região (character)
+- Country: País (character)
+- Group: Grupo (character)
+
+## factSales
+- OrderDate: Data do pedido (date)
+- OrderDateKey: _FK_ Chave estrangeira para a dimensão Calendar (numeric)
+- ProductKey: _FK_ Chave estrangeira para a dimensão Products (numeric)
+- CustomerKey: _FK_ Chave estrangeira para a dimensão Customers (numeric)
+- SalesTerritoryKey: _FK_ Chave estrangeira para a dimensão Territory (numeric)
+- SalesOrderNumber: Número do pedido (character)
+- SalesOrderLineNumber: Número da linha do pedido (numeric)
+- OrderQuantity: Quantidade do produto pedida (numeric)
+- UnitPrice: Preço unitário (numeric)
+- ProductStandardCost: Custo padrão do produto (numeric)
+- SalesAmount: Valor total da venda (numeric)
+- TaxAmt: Valor do imposto (numeric)
+- Freight: Valor do frete (numeric)
+- RegionMonthID: Identificador de região e mês (character)
+
+## Calendar
+- ID: Identificador único (numeric)
+- Date: Data no formato YYYY-MM-DD (date)
+- DayNumberOfWeek: Número do dia da semana (numeric)
+- DayName: Nome do dia da semana (character)
+- MonthName: Nome do mês (character)
+- MonthNumberOfYear: Número do mês (numeric)
+- DayNumberOfYear: Número do dia do ano (numeric)
+- WeekNumberOfYear: Número da semana do ano (numeric)
+- CalendarQuarter: Número do trimestre (numeric)
+- CalendarYear: Ano (numeric)
+- DayNumberOfMonth: Número do dia do mês (numeric)
+
+married and single 
+rendimentoews por classes etárias 

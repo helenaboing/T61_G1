@@ -1,0 +1,16 @@
+---
+title: "Relatório BI"
+author: "Helena Boing, Joana Costa, Alejandra Moreira, Lohanna Pom e Pedro" ["Helena Boing", "Alejandra Moreira", "Joana Costa", "Lohanna Pombo", "Pedro Sequeira"]
+date: "2025-04-22"
+output: pdf_document
+---
+# Dimensões
+
+## Customers
+- CustumerKey: _PK_ Chave primária da dimensão (numeric)
+- GeographyKey: _FK_ Chave estrangeira da dimensão (numeric)
+- Name: Nome do consumidor (character)
+- BirthDate: Data de nascimento do consumidor (numeric)
+- MaritalStatus: Estado civil do consumidor (character)
+- Gender: Gênero do consumidor (character)
+- YearlyIncome: Renda anual do consumidor (numeric) (numeric)
