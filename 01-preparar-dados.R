@@ -7,10 +7,10 @@
 # tinytex::install_tinytex() #(inst 1x) compilar documentos para PDF
 # Sys.which("pdflatex") #(faz parte do TinyTeX)
 
-
 library(dplyr) # Manipular dataframes: filter(), select(), mutate(), group_by(), summarise()
 library(lubridate) # Trabalhar com datas: ymd(), today(), now(), interval(), day(), month(), year()
 library(ggplot2) # Criar gráficos: ggplot(), geom_point(), geom_line(), geom_bar(), etc.
+library(scales) # Formatação de números e percentagens: percent(), comma(), dollar()
 
 library(tidyr) # Organizar dados: pivot_longer(), pivot_wider(), separate(), unite()
 library(readr) # Ler ficheiros CSV e texto: read_csv(), read_delim(), write_csv()
@@ -139,7 +139,6 @@ dfinal <- factSales %>%
         # Informações geográficas
         City, StateProvinceName, CountryRegionName, Region, Country, Group
     )
-
 
 # Cohort Analysis (first 12 months for clarity)
 cohort_data <- dfinal %>%

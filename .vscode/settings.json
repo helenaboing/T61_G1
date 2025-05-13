@@ -1,0 +1,7 @@
+{
+  "editor.formatOnSave": true,
+  "files.defaultLanguage": "r",
+  "r.rterm.mac": "/usr/local/bin/R",
+  "r.lsp.path": "/usr/local/bin/R",
+  "quarto.render.onSave": true
+} 

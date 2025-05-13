@@ -21,6 +21,18 @@ library(scales)    # For comma() and percent()
 library(tidyr)
 load("dfinal.Rda")
 
+# Create age groups
+dfinal <- dfinal %>%
+  mutate(
+    FaixaIdade = case_when(
+      Idade <= 18 ~ "0-18",
+      Idade <= 30 ~ "19-30",
+      Idade <= 45 ~ "31-45",
+      Idade <= 60 ~ "46-60",
+      TRUE ~ "60+"
+    )
+  )
+
 ## Customer Demographic Profile
 
 ### Gender Distribution
