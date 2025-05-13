@@ -1,0 +1,31 @@
+{
+  "version": "0.2",
+  "language": "pt,pt-BR",
+  "dictionaries": ["portuguese", "pt-br", "business-terms"],
+  "words": [
+    "AnoCohorte",
+    "CohortIndex",
+    "CohortMonth",
+    "CohortSize",
+    "CustomerKey",
+    "FaixaIdade",
+    "Gender",
+    "Idade",
+    "Lucro",
+    "OrderDate",
+    "OrderQuantity",
+    "ProductCategoryName",
+    "ProductKey",
+    "ProductName",
+    "Retencao",
+    "SalesAmount",
+    "SalesOrderNumber",
+    "UsuariosAtivos",
+    "Vendas",
+    "comma",
+    "percent",
+    "scales"
+  ],
+  "ignoreWords": [],
+  "import": []
+}

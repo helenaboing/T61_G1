@@ -3,5 +3,7 @@
   "files.defaultLanguage": "r",
   "r.rterm.mac": "/usr/local/bin/R",
   "r.lsp.path": "/usr/local/bin/R",
-  "quarto.render.onSave": true
-} 
+  "quarto.render.onSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "quarto.path": "/usr/local/bin/quarto"
+}

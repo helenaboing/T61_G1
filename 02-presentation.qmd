@@ -32,84 +32,46 @@ dfinal <- dfinal %>%
       TRUE ~ "60+"
     )
   )
-
-## Customer Demographic Profile
-
-### Gender Distribution
-```{r}
-dfinal %>%
-  distinct(CustomerKey, Gender) %>%
-  count(Gender) %>%
-  ggplot(aes(x = Gender, y = n, fill = Gender)) +
-    geom_bar(stat = "identity") +
-    labs(
-      title = "Distribuição de Clientes por Gênero",
-      x = "Gênero",
-      y = "Número de Clientes"
-    ) +
-    theme_minimal()
 ```
 
-### Age Distribution
-```{r}
-ggplot(dfinal, aes(x = Idade)) +
-  geom_histogram(binwidth = 5, fill = "#2c7bb6", color = "white") +
-  labs(
-    title = "Distribuição da Idade dos Clientes",
-    x = "Idade",
-    y = "Frequência"
-  ) +
-  theme_minimal()
-```
-
-### Distribuição de Clientes por Gênero e Faixa Etária
+## Maioria dos clientes tem 31–45 anos; gêneros igualmente representados
 
 ```{r}
-# Defina as cores para cada faixa etária por gênero
-cores_feminino <- c("#FFB6C1", "#FF69B4", "#FF1493", "#C71585", "#8B008B")
-cores_masculino <- c("#87CEFA", "#4682B4", "#1E90FF", "#104E8B", "#00008B")
-
-# Crie uma coluna para mapear as cores conforme gênero e faixa etária
-dfinal <- dfinal %>%
+# Prepare data for the pyramid
+pyramid_data <- dfinal %>%
+  distinct(CustomerKey, Gender, FaixaIdade) %>%
+  count(Gender, FaixaIdade) %>%
   mutate(
-    Cor = case_when(
-      Gender == "F" & FaixaIdade == "0-18" ~ cores_feminino[1],
-      Gender == "F" & FaixaIdade == "19-30" ~ cores_feminino[2],
-      Gender == "F" & FaixaIdade == "31-45" ~ cores_feminino[3],
-      Gender == "F" & FaixaIdade == "46-60" ~ cores_feminino[4],
-      Gender == "F" & FaixaIdade == "60+"   ~ cores_feminino[5],
-      Gender == "M" & FaixaIdade == "0-18" ~ cores_masculino[1],
-      Gender == "M" & FaixaIdade == "19-30" ~ cores_masculino[2],
-      Gender == "M" & FaixaIdade == "31-45" ~ cores_masculino[3],
-      Gender == "M" & FaixaIdade == "46-60" ~ cores_masculino[4],
-      Gender == "M" & FaixaIdade == "60+"   ~ cores_masculino[5]
-    )
+    n = ifelse(Gender == "M", -n, n),  # Make male values negative for the pyramid effect
+    Gender = factor(Gender, levels = c("M", "F"), labels = c("Masculino", "Feminino")),
+    FaixaIdade = factor(FaixaIdade, 
+                       levels = c("0-18", "19-30", "31-45", "46-60", "60+"),
+                       ordered = TRUE)
   )
 
-# Agrupe e conte os clientes
-dados_plot <- dfinal %>%
-  distinct(CustomerKey, Gender, FaixaIdade, Cor) %>%
-  count(Gender, FaixaIdade, Cor)
-
-# Gráfico de barras empilhadas por gênero e faixa etária, com cores personalizadas
-ggplot(dados_plot, aes(x = Gender, y = n, fill = interaction(Gender, FaixaIdade))) +
-  geom_bar(stat = "identity", position = "stack", color = "black") +
-  scale_fill_manual(
-    name = "Faixa Etária",
-    values = setNames(dados_plot$Cor, interaction(dados_plot$Gender, dados_plot$FaixaIdade)),
-    labels = paste(dados_plot$Gender, dados_plot$FaixaIdade, sep = " - ")
+# Create the pyramid plot
+ggplot(pyramid_data, aes(x = FaixaIdade, y = n, fill = Gender)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Masculino" = "#4682B4", "Feminino" = "#FF69B4")) +
+  coord_flip() +
+  scale_y_continuous(
+    labels = function(x) abs(x),
+    breaks = pretty(pyramid_data$n)
   ) +
   labs(
-    title = "Distribuição de Clientes por Gênero e Faixa Etária",
-    x = "Gênero",
-    y = "Número de Clientes"
+    title = "Pirâmide Demográfica dos Clientes",
+    x = "Faixa Etária",
+    y = "Número de Clientes",
+    fill = "Gênero"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
 ```
 
-## Sales Analysis
-
-### Sales by Quarter
+## Há um pico de ventas no 2º trimestre de 2019
 ```{r}
 vendas_trimestrais <- dfinal %>%
   mutate(
@@ -120,6 +82,8 @@ vendas_trimestrais <- dfinal %>%
   ) %>%
   group_by(Trimestre, DataTrimestre) %>%
   summarise(TotalVendas = sum(SalesAmount, na.rm = TRUE), .groups = "drop") %>%
+  # Filter out Q3 2019
+  filter(!(Ano == 2019 & TrimestreNum == 3)) %>%
   arrange(DataTrimestre) %>%
   mutate(Trimestre = factor(Trimestre, levels = unique(Trimestre)))
 
@@ -136,7 +100,7 @@ ggplot(vendas_trimestrais, aes(x = Trimestre, y = TotalVendas, group = 1)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-### Sales by Day of the Week
+## Sales by Day of the Week
 ```{r}
 vendas_por_dia <- dfinal %>%
   mutate(Weekday = wday(OrderDate, label = TRUE, abbr = FALSE, locale = "pt_BR")) %>%
@@ -165,9 +129,7 @@ ggplot(vendas_por_dia, aes(x = Weekday, y = TotalVendas)) +
 - Número de produtos vendidos: `r dplyr::n_distinct(dfinal$ProductKey)`
 - Período analisado: `r format(min(dfinal$OrderDate), '%d/%m/%Y')` a `r format(max(dfinal$OrderDate), '%d/%m/%Y')`
 
-## Análise de Produtos
-
-### Top 10 Produtos Mais Vendidos
+## Top 10 Produtos Mais Vendidos
 ```{r}
 top10 <- dfinal %>%
   group_by(ProductKey, ProductName) %>%
@@ -190,7 +152,7 @@ ggplot(top10, aes(x = reorder(ProductName, TotalQuantity), y = TotalQuantity)) +
   )
 ```
 
-### Lucro por Categoria
+## Lucro por Categoria
 ```{r}
 dfinal %>%
   group_by(ProductCategoryName) %>%
@@ -242,13 +204,6 @@ media_tempo_compras <- dfinal %>%
 - Taxa de recompra: `r taxa_recompra`%
 - Average Time Between Purchases: `r media_tempo_compras` days
 
-## Análise de Cohorte
-
-### Retenção de Clientes
-## Análise de Cohorte
-
-### Retenção de Clientes
-
 ```{r}
 # Preparar dados de coorte
 cohort_data <- dfinal %>%
@@ -273,9 +228,16 @@ cohort_retention <- cohort_data %>%
   ) %>%
   mutate(Retencao = UsuariosAtivos / CohortSize)
 
-# Gráfico mosaico para cada ano de coorte
+#| title: "Análise de Retenção por Cohorte"
+#| echo: false
+
 anos <- unique(cohort_retention$AnoCohorte)
+
+```{r}
+#| results: 'asis'
 for (ano in anos) {
+  cat("## Retenção de Clientes -", ano, "\n\n")
+  
   dados_ano <- cohort_retention %>% filter(AnoCohorte == ano)
   print(
     ggplot(dados_ano, aes(x = CohortIndex, y = CohortMonth, fill = Retencao)) +
@@ -296,27 +258,6 @@ for (ano in anos) {
         plot.title = element_text(face = "bold", hjust = 0.5)
       )
   )
+  cat("\n\n")
 }
-
-# Gráfico de linha de retenção média por ano de coorte
-cohort_line <- cohort_retention %>%
-  group_by(AnoCohorte, CohortIndex) %>%
-  summarise(RetencaoMedia = mean(Retencao, na.rm = TRUE), .groups = "drop")
-
-ggplot(cohort_line, aes(x = CohortIndex, y = RetencaoMedia, color = as.factor(AnoCohorte))) +
-  geom_line(size = 1.2) +
-  geom_point(size = 2) +
-  scale_y_continuous(labels = scales::percent) +
-  scale_x_continuous(breaks = 1:12, labels = paste0(1:12, "º mês")) +
-  labs(
-    title = "Retenção Média por Ano de Cohorte",
-    x = "Meses desde a 1ª compra",
-    y = "Retenção Média",
-    color = "Ano da Cohorte"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(face = "bold", hjust = 0.5)
-  )
 ```
-
