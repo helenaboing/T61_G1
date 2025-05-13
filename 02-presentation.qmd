@@ -34,6 +34,8 @@ dfinal <- dfinal %>%
   )
 ```
 
+
+
 ## Maioria dos clientes tem 31–45 anos; gêneros igualmente representados
 
 ```{r}
@@ -71,7 +73,280 @@ ggplot(pyramid_data, aes(x = FaixaIdade, y = n, fill = Gender)) +
   )
 ```
 
-## Há um pico de ventas no 2º trimestre de 2019
+## Distribuição de Vendas por País
+```{r}
+# Análise por país
+vendas_por_pais <- dfinal %>%
+  group_by(CountryRegionName) %>%
+  summarise(
+    TotalVendas = sum(SalesAmount),
+    NumClientes = n_distinct(CustomerKey),
+    NumPedidos = n_distinct(SalesOrderNumber),
+    TicketMedio = TotalVendas / NumPedidos
+  ) %>%
+  arrange(desc(TotalVendas))
+
+# Gráfico de barras para vendas por país
+ggplot(vendas_por_pais, aes(x = reorder(CountryRegionName, TotalVendas), y = TotalVendas)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Total de Vendas por País",
+    x = "País",
+    y = "Total de Vendas (€)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+```
+
+## Análise Regional Detalhada
+```{r}
+# Análise por região/estado
+vendas_por_regiao <- dfinal %>%
+  group_by(CountryRegionName, StateProvinceName) %>%
+  summarise(
+    TotalVendas = sum(SalesAmount),
+    NumClientes = n_distinct(CustomerKey),
+    NumPedidos = n_distinct(SalesOrderNumber),
+    TicketMedio = TotalVendas / NumPedidos,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(TotalVendas))
+
+# Top 10 regiões por vendas
+top_regioes <- vendas_por_regiao %>%
+  slice_max(TotalVendas, n = 10)
+
+ggplot(top_regioes, aes(x = reorder(StateProvinceName, TotalVendas), y = TotalVendas)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  coord_flip() +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Top 10 Regiões por Volume de Vendas",
+    x = "Região/Estado",
+    y = "Total de Vendas (€)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+```
+
+## Análise por Cidade
+```{r}
+# Análise por cidade
+vendas_por_cidade <- dfinal %>%
+  group_by(CountryRegionName, StateProvinceName, City) %>%
+  summarise(
+    TotalVendas = sum(SalesAmount),
+    NumClientes = n_distinct(CustomerKey),
+    NumPedidos = n_distinct(SalesOrderNumber),
+    TicketMedio = TotalVendas / NumPedidos,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(TotalVendas))
+
+# Top 15 cidades por vendas
+top_cidades <- vendas_por_cidade %>%
+  slice_max(TotalVendas, n = 15)
+
+ggplot(top_cidades, aes(x = reorder(City, TotalVendas), y = TotalVendas)) +
+  geom_bar(stat = "identity", fill = "darkred") +
+  coord_flip() +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Top 15 Cidades por Volume de Vendas",
+    x = "Cidade",
+    y = "Total de Vendas (€)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+```
+
+## Métricas Geográficas Principais
+```{r}
+# Calcular métricas principais
+metricas_geograficas <- list(
+  "Total de Países" = n_distinct(dfinal$CountryRegionName),
+  "Total de Regiões/Estados" = n_distinct(dfinal$StateProvinceName),
+  "Total de Cidades" = n_distinct(dfinal$City),
+  "País com Maior Volume" = vendas_por_pais$CountryRegionName[1],
+  "Região com Maior Volume" = vendas_por_regiao$StateProvinceName[1],
+  "Cidade com Maior Volume" = vendas_por_cidade$City[1]
+)
+
+# Exibir métricas
+cat("Métricas Geográficas Principais:\n")
+for (i in seq_along(metricas_geograficas)) {
+  cat(names(metricas_geograficas)[i], ":", metricas_geograficas[[i]], "\n")
+}
+```
+
+## Densidade de Clientes por Região
+```{r}
+# Calcular densidade de clientes por região
+densidade_clientes <- dfinal %>%
+  group_by(CountryRegionName, StateProvinceName) %>%
+  summarise(
+    NumClientes = n_distinct(CustomerKey),
+    TotalVendas = sum(SalesAmount),
+    NumCidades = n_distinct(City),
+    DensidadeClientes = NumClientes / NumCidades,
+    TicketMedio = TotalVendas / NumClientes,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(DensidadeClientes))
+
+# Visualizar top 10 regiões por densidade de clientes
+ggplot(head(densidade_clientes, 10), 
+       aes(x = reorder(StateProvinceName, DensidadeClientes), 
+           y = DensidadeClientes)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Regiões por Densidade de Clientes",
+    subtitle = "Número médio de clientes por cidade",
+    x = "Região",
+    y = "Clientes por Cidade"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+## Preferências Regionais por Categoria de Produto
+```{r}
+# Análise de preferências por categoria por região
+preferencias_categoria <- dfinal %>%
+  group_by(CountryRegionName, StateProvinceName, ProductCategoryName) %>%
+  summarise(
+    TotalVendas = sum(SalesAmount),
+    NumClientes = n_distinct(CustomerKey),
+    NumPedidos = n_distinct(SalesOrderNumber),
+    .groups = "drop"
+  ) %>%
+  group_by(CountryRegionName, StateProvinceName) %>%
+  mutate(
+    PercentualCategoria = TotalVendas / sum(TotalVendas) * 100
+  ) %>%
+  arrange(desc(TotalVendas))
+
+# Visualizar top 5 regiões e suas preferências por categoria
+top_regioes_categoria <- preferencias_categoria %>%
+  group_by(StateProvinceName) %>%
+  summarise(TotalVendas = sum(TotalVendas)) %>%
+  slice_max(TotalVendas, n = 5) %>%
+  pull(StateProvinceName)
+
+ggplot(preferencias_categoria %>% 
+         filter(StateProvinceName %in% top_regioes_categoria),
+       aes(x = StateProvinceName, y = PercentualCategoria, fill = ProductCategoryName)) +
+  geom_bar(stat = "identity", position = "stack") +
+  coord_flip() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(
+    title = "Distribuição de Vendas por Categoria nas Top 5 Regiões",
+    x = "Região",
+    y = "Percentual de Vendas (%)",
+    fill = "Categoria"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    legend.position = "bottom"
+  )
+```
+
+```{r}
+# Identificar mercados com potencial de crescimento
+oportunidades_mercado <- dfinal %>%
+  group_by(CountryRegionName, StateProvinceName) %>%
+  summarise(
+    NumClientes = n_distinct(CustomerKey),
+    TotalVendas = sum(SalesAmount),
+    NumCidades = n_distinct(City),
+    TicketMedio = TotalVendas / NumClientes,
+    Crescimento = as.numeric(difftime(max(OrderDate), min(OrderDate), units = "days")) / 365,  # Anos de operação
+    VendasPorAno = TotalVendas / Crescimento,
+    .groups = "drop"
+  ) %>%
+  # Remover regiões com menos de 1 ano de operação
+  filter(Crescimento >= 1) %>%
+  # Normalizar as variáveis
+  mutate(
+    NumCidadesNorm = (NumCidades - mean(NumCidades)) / sd(NumCidades),
+    TicketMedioNorm = (TicketMedio - mean(TicketMedio)) / sd(TicketMedio),
+    VendasPorAnoNorm = (VendasPorAno - mean(VendasPorAno)) / sd(VendasPorAno),
+    # Calcular score de oportunidade
+    ScoreOportunidade = (NumCidadesNorm * 0.4) +  # Peso para número de cidades
+                        (TicketMedioNorm * 0.3) +  # Peso para ticket médio
+                        (VendasPorAnoNorm * 0.3)   # Peso para vendas por ano
+  ) %>%
+  arrange(desc(ScoreOportunidade))
+```
+
+## Top 10 Mercados com Maior Potencial de Crescimento
+```{r}
+# Visualizar top 10 mercados com maior potencial
+ggplot(head(oportunidades_mercado, 10),
+       aes(x = reorder(StateProvinceName, ScoreOportunidade),
+           y = ScoreOportunidade)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Mercados com Maior Potencial de Crescimento",
+    subtitle = "Score baseado em número de cidades, ticket médio e vendas por ano",
+    x = "Região",
+    y = "Score de Oportunidade"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+## Detalhes das Top 5 Regiões com Maior Potencial
+```{r}
+# Exibir detalhes das top 5 regiões
+cat("\nDetalhes das Top 5 Regiões com Maior Potencial:\n")
+top_5_regioes <- head(oportunidades_mercado, 5)
+for (i in 1:nrow(top_5_regioes)) {
+  cat("\n", top_5_regioes$StateProvinceName[i], ":\n")
+  cat("  Número de Cidades:", top_5_regioes$NumCidades[i], "\n")
+  cat("  Ticket Médio: €", format(round(top_5_regioes$TicketMedio[i], 2), big.mark = ","), "\n")
+  cat("  Vendas por Ano: €", format(round(top_5_regioes$VendasPorAno[i], 2), big.mark = ","), "\n")
+  cat("  Score de Oportunidade:", round(top_5_regioes$ScoreOportunidade[i], 2), "\n")
+}
+```
+
+## Resumo de Penetração de Mercado
+```{r}
+# Calcular métricas de resumo
+resumo_penetracao <- list(
+  "Regiões com Alta Densidade" = nrow(filter(densidade_clientes, DensidadeClientes > median(DensidadeClientes))),
+  "Regiões com Baixa Densidade" = nrow(filter(densidade_clientes, DensidadeClientes <= median(DensidadeClientes))),
+  "Categoria Mais Popular" = names(sort(table(dfinal$ProductCategoryName), decreasing = TRUE)[1]),
+  "Região com Maior Crescimento" = head(oportunidades_mercado, 1)$StateProvinceName,
+  "Ticket Médio Global" = mean(dfinal$SalesAmount / dfinal$OrderQuantity),
+  "Número Médio de Cidades por Região" = mean(densidade_clientes$NumCidades)
+)
+
+# Exibir resumo
+cat("Resumo de Penetração de Mercado:\n")
+for (i in seq_along(resumo_penetracao)) {
+  cat(names(resumo_penetracao)[i], ":", resumo_penetracao[[i]], "\n")
+}
+```
+
+## Vendas aceleram fortemente a partir de Q2 2018
 ```{r}
 vendas_trimestrais <- dfinal %>%
   mutate(
@@ -80,16 +355,58 @@ vendas_trimestrais <- dfinal %>%
     DataTrimestre = make_date(Ano, (TrimestreNum - 1) * 3 + 1, 1),
     Trimestre = paste0("Q", TrimestreNum, " ", Ano)
   ) %>%
+  # Filter out Q3 2019 before summarization
+  filter(!(Ano == 2019 & TrimestreNum == 3)) %>%
   group_by(Trimestre, DataTrimestre) %>%
   summarise(TotalVendas = sum(SalesAmount, na.rm = TRUE), .groups = "drop") %>%
-  # Filter out Q3 2019
-  filter(!(Ano == 2019 & TrimestreNum == 3)) %>%
   arrange(DataTrimestre) %>%
   mutate(Trimestre = factor(Trimestre, levels = unique(Trimestre)))
 
+# Calculate metrics
+primeiro_trimestre <- min(vendas_trimestrais$DataTrimestre)
+ultimo_trimestre <- max(vendas_trimestrais$DataTrimestre)
+primeiro_valor <- vendas_trimestrais$TotalVendas[1]
+ultimo_valor <- tail(vendas_trimestrais$TotalVendas, 1)
+anos_totais <- as.numeric(difftime(ultimo_trimestre, primeiro_trimestre, units = "days")) / 365.25
+
+# Calculate CAGR
+cagr <- (ultimo_valor/primeiro_valor)^(1/anos_totais) - 1
+
+# Calculate YoY growth for each year
+crescimento_anual <- vendas_trimestrais %>%
+  mutate(Ano = year(DataTrimestre)) %>%
+  group_by(Ano) %>%
+  summarise(VendasAno = sum(TotalVendas)) %>%
+  arrange(Ano) %>%
+  mutate(
+    CrescimentoYoY = (VendasAno/lag(VendasAno) - 1) * 100
+  )
+
+# Calculate average quarterly growth
+crescimento_trimestral <- vendas_trimestrais %>%
+  mutate(
+    CrescimentoTrimestral = (TotalVendas/lag(TotalVendas) - 1) * 100
+  ) %>%
+  summarise(
+    MediaCrescimentoTrimestral = mean(CrescimentoTrimestral, na.rm = TRUE)
+  )
+
+# Create the plot with annotations
 ggplot(vendas_trimestrais, aes(x = Trimestre, y = TotalVendas, group = 1)) +
   geom_line(color = "blue", size = 1) +
   geom_point(color = "darkblue") +
+  # Add annotations for metrics
+  annotate("text", 
+           x = Inf, y = -Inf,
+           label = paste0(
+             "CAGR: ", scales::percent(cagr, accuracy = 0.1), "\n",
+             "Cresc. Médio Trimestral: ", scales::percent(crescimento_trimestral$MediaCrescimentoTrimestral/100, accuracy = 0.1), "\n",
+             "Cresc. Anual 2018: ", scales::percent(crescimento_anual$CrescimentoYoY[2]/100, accuracy = 0.1), "\n",
+             "Cresc. Anual 2019: ", scales::percent(crescimento_anual$CrescimentoYoY[3]/100, accuracy = 0.1)
+           ),
+           hjust = 1.1, vjust = -0.5,
+           size = 3.5,
+           family = "sans") +
   labs(
     title = "Volume de Vendas por Trimestre",
     x = "Trimestre",
@@ -97,29 +414,55 @@ ggplot(vendas_trimestrais, aes(x = Trimestre, y = TotalVendas, group = 1)) +
   ) +
   scale_y_continuous(labels = scales::comma) +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
 ```
 
-## Sales by Day of the Week
-```{r}
-vendas_por_dia <- dfinal %>%
-  mutate(Weekday = wday(OrderDate, label = TRUE, abbr = FALSE, locale = "pt_BR")) %>%
-  group_by(Weekday) %>%
-  summarise(TotalVendas = sum(SalesAmount, na.rm = TRUE), .groups = "drop") %>%
-  mutate(Weekday = factor(Weekday, 
-    levels = c("domingo", "segunda-feira", "terça-feira", "quarta-feira",
-               "quinta-feira", "sexta-feira", "sábado")))
 
-ggplot(vendas_por_dia, aes(x = Weekday, y = TotalVendas)) +
-  geom_col(fill = "steelblue") +
-  geom_text(aes(label = round(TotalVendas, 2)), vjust = 1.5, color = "white", size = 4) +
+## Vendas uniformemente distribuídas ao longo da semana
+```{r}
+# Set locale to English
+vendas_por_dia <- dfinal %>%
+  mutate(
+    Weekday = wday(OrderDate, label = TRUE, abbr = FALSE),
+    Weekday = factor(Weekday, 
+      levels = c("Sunday", "Monday", "Tuesday", "Wednesday",
+                 "Thursday", "Friday", "Saturday"),
+      ordered = TRUE)
+  ) %>%
+  group_by(Weekday) %>%
+  summarise(
+    TotalSales = sum(SalesAmount, na.rm = TRUE),
+    NumOrders = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    AverageSales = TotalSales / NumOrders,
+    Percentage = TotalSales / sum(TotalSales) * 100
+  )
+
+# Create a more informative visualization
+ggplot(vendas_por_dia, aes(x = Weekday, y = TotalSales)) +
+  geom_col(fill = "steelblue", alpha = 0.8) +
+  geom_text(aes(label = paste0("€", format(round(TotalSales), big.mark = ","))), 
+            vjust = -0.5, size = 3.5) +
+  geom_text(aes(label = paste0(round(Percentage, 1), "%")), 
+            vjust = 2, size = 3.5, color = "white") +
   labs(
-    title = "Total de Vendas por Dia da Semana",
+    title = "Distribuição de Vendas por Dia da Semana",
+    subtitle = "Valor total e percentual de vendas",
     x = "Dia da Semana",
-    y = "Valor Total de Vendas"
+    y = "Total de Vendas (€)"
   ) +
   scale_y_continuous(labels = scales::comma) +
-  theme_minimal()
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
 ```
 
 ## Visão Geral do Negócio
@@ -128,6 +471,50 @@ ggplot(vendas_por_dia, aes(x = Weekday, y = TotalVendas)) +
 - Número de clientes únicos: `r dplyr::n_distinct(dfinal$CustomerKey)`
 - Número de produtos vendidos: `r dplyr::n_distinct(dfinal$ProductKey)`
 - Período analisado: `r format(min(dfinal$OrderDate), '%d/%m/%Y')` a `r format(max(dfinal$OrderDate), '%d/%m/%Y')`
+
+## ATV em queda desde ago/2017
+
+```{r}
+# Calculate ATV by month
+atv_mensal <- dfinal %>%
+  group_by(Ano = year(OrderDate), Mes = month(OrderDate)) %>%
+  summarise(
+    TotalVendas = sum(SalesAmount),
+    NumTransacoes = n_distinct(SalesOrderNumber),
+    ATV = TotalVendas / NumTransacoes,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    Data = make_date(Ano, Mes, 1),
+    MesAno = format(Data, "%b/%Y")
+  ) %>%
+  # Remove the last month as it's incomplete
+  filter(Data < max(Data))
+
+# Create ATV trend plot
+ggplot(atv_mensal, aes(x = Data, y = ATV)) +
+  geom_line(color = "darkblue", size = 1) +
+  geom_point(color = "darkblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "red", linetype = "dashed") +
+  labs(
+    title = "Evolução do Valor Médio de Transação (ATV)",
+    subtitle = "Tendência mensal do valor médio por transação",
+    x = "Mês",
+    y = "ATV (€)"
+  ) +
+  scale_y_continuous(labels = scales::comma) +
+  scale_x_date(date_labels = "%b/%Y", date_breaks = "3 months") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+# Calculate and display overall ATV (excluding last month)
+atv_geral <- sum(atv_mensal$TotalVendas) / sum(atv_mensal$NumTransacoes)
+cat("\nATV (Valor médio por transação) Geral: €", format(round(atv_geral, 2), big.mark = ","))
+```
 
 ## Top 10 Produtos Mais Vendidos
 ```{r}
@@ -152,7 +539,8 @@ ggplot(top10, aes(x = reorder(ProductName, TotalQuantity), y = TotalQuantity)) +
   )
 ```
 
-## Lucro por Categoria
+## A maioria dos lucros são gerados pela categoria de produtos "Bike"
+
 ```{r}
 dfinal %>%
   group_by(ProductCategoryName) %>%
@@ -202,60 +590,107 @@ media_tempo_compras <- dfinal %>%
 
 - Clientes com múltiplas compras: `r clientes_multiplas_compras`
 - Taxa de recompra: `r taxa_recompra`%
-- Average Time Between Purchases: `r media_tempo_compras` days
+- Tempo médio entre compras: `r media_tempo_compras` dias
 
 ```{r}
 # Preparar dados de coorte
-cohort_data <- dfinal %>%
-  group_by(CustomerKey) %>%
-  summarise(PrimeiraCompra = min(OrderDate, na.rm = TRUE), .groups = "drop") %>%
-  left_join(dfinal, by = "CustomerKey") %>%
-  mutate(
-    AnoCohorte = year(PrimeiraCompra),
-    CohortMonth = format(floor_date(PrimeiraCompra, "month"), "%Y-%m"),
-    CohortIndex = as.integer((year(OrderDate) - year(PrimeiraCompra)) * 12 + (month(OrderDate) - month(PrimeiraCompra)) + 1)
-  ) %>%
-  filter(CohortIndex > 0 & CohortIndex <= 12)
+library(dplyr)
+library(lubridate)
 
-cohort_retention <- cohort_data %>%
-  group_by(AnoCohorte, CohortMonth, CohortIndex) %>%
-  summarise(UsuariosAtivos = n_distinct(CustomerKey), .groups = "drop") %>%
-  left_join(
-    cohort_data %>%
-      group_by(CohortMonth) %>%
-      summarise(CohortSize = n_distinct(CustomerKey), .groups = "drop"),
-    by = "CohortMonth"
-  ) %>%
-  mutate(Retencao = UsuariosAtivos / CohortSize)
+# 1. Identificar a primeira compra de cada cliente
+primeiras_compras <- dfinal %>%
+  group_by(CustomerKey) %>%
+  summarise(PrimeiraCompra = min(OrderDate), .groups = "drop")
+
+# 2. Juntar com os dados originais e calcular o mês relativo
+cohort_data <- dfinal %>%
+  inner_join(primeiras_compras, by = "CustomerKey") %>%
+  mutate(
+    CohortMonth = format(floor_date(PrimeiraCompra, "month"), "%Y-%m"),
+    MesRelativo = (year(OrderDate) - year(PrimeiraCompra)) * 12 +
+                  (month(OrderDate) - month(PrimeiraCompra))
+  )
+
+# 3. Para cada cliente, coorte e mês, contar o número de compras
+compras_por_mes <- cohort_data %>%
+  group_by(CohortMonth, CustomerKey, MesRelativo) %>%
+  summarise(NumCompras = n(), .groups = "drop")
+
+# 4. Para mês 0, contar apenas clientes com NumCompras > 1
+#    Para meses > 0, contar clientes com NumCompras > 0
+compras_por_mes <- compras_por_mes %>%
+  mutate(
+    Recompra = case_when(
+      MesRelativo == 0 ~ NumCompras > 1,
+      MesRelativo > 0 ~ NumCompras > 0,
+      TRUE ~ FALSE
+    )
+  )
+
+# 5. Calcular o tamanho da coorte
+cohort_sizes <- cohort_data %>%
+  filter(MesRelativo == 0) %>%
+  group_by(CohortMonth) %>%
+  summarise(CohortSize = n_distinct(CustomerKey), .groups = "drop")
+
+# 6. Calcular a taxa de retenção
+cohort_retention <- compras_por_mes %>%
+  filter(Recompra) %>%
+  group_by(CohortMonth, MesRelativo) %>%
+  summarise(ClientesRetidos = n_distinct(CustomerKey), .groups = "drop") %>%
+  left_join(cohort_sizes, by = "CohortMonth") %>%
+  mutate(Retencao = ClientesRetidos / CohortSize)
 
 #| title: "Análise de Retenção por Cohorte"
 #| echo: false
 
-anos <- unique(cohort_retention$AnoCohorte)
+anos <- unique(year(as.Date(paste0(cohort_retention$CohortMonth, "-01"))))
 
 ```{r}
 #| results: 'asis'
 for (ano in anos) {
   cat("## Retenção de Clientes -", ano, "\n\n")
-  
-  dados_ano <- cohort_retention %>% filter(AnoCohorte == ano)
+  dados_ano <- cohort_retention %>% filter(year(as.Date(paste0(CohortMonth, "-01"))) == ano)
   print(
-    ggplot(dados_ano, aes(x = CohortIndex, y = CohortMonth, fill = Retencao)) +
-      geom_tile(color = "white") +
-      scale_fill_gradient2(low = "#f7fbff", mid = "#6baed6", high = "#08306b", midpoint = 0.5, labels = scales::percent) +
-      geom_text(aes(label = ifelse(Retencao > 0, scales::percent(Retencao, accuracy = 1), "")), size = 3, color = "black") +
-      scale_x_continuous(breaks = 1:12, labels = paste0(1:12, "º mês")) +
+    ggplot(dados_ano, aes(x = MesRelativo, y = CohortMonth, fill = Retencao)) +
+      geom_tile(color = "white", size = 0.5) +
+      scale_fill_gradient2(
+        low = "#f7fbff", 
+        mid = "#6baed6", 
+        high = "#08306b", 
+        midpoint = 0.5, 
+        labels = scales::percent_format(accuracy = 1),
+        name = "Taxa de Retenção"
+      ) +
+      geom_text(
+        aes(label = ifelse(!is.na(Retencao) & Retencao > 0, 
+                          scales::percent(Retencao, accuracy = 1), "")), 
+        size = 3.5, 
+        color = "black",
+        fontface = "bold"
+      ) +
+      scale_x_continuous(
+        breaks = 0:11, 
+        labels = paste0(0:11, "º mês"),
+        name = "Meses desde a Primeira Compra (meses)"
+      ) +
       labs(
-        title = paste("Retenção de Clientes - Cohortes de", ano),
-        x = "Meses desde a 1ª compra",
-        y = "Cohorte (Ano-Mês da 1ª compra)",
-        fill = "Retenção"
+        title = paste("Análise de Retenção de Clientes -", ano),
+        subtitle = "Percentual de clientes que realizaram compras em cada mês após a primeira compra",
+        x = "Meses desde a Primeira Compra (meses)",
+        y = "Mês de Primeira Compra (Ano-Mês)",
+        fill = "Taxa de Retenção"
       ) +
       theme_minimal() +
       theme(
         axis.text.x = element_text(angle = 0, hjust = 0.5, size = 10),
         axis.text.y = element_text(size = 10),
-        plot.title = element_text(face = "bold", hjust = 0.5)
+        plot.title = element_text(face = "bold", hjust = 0.5, size = 14),
+        plot.subtitle = element_text(hjust = 0.5, size = 11, margin = margin(b = 20)),
+        legend.title = element_text(size = 11),
+        legend.text = element_text(size = 10),
+        panel.grid.major = element_line(color = "gray90"),
+        panel.grid.minor = element_blank()
       )
   )
   cat("\n\n")
