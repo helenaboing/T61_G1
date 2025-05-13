@@ -1,0 +1,42 @@
+name: Render Quarto Presentation
+
+on:
+  push:
+    paths:
+      - "02-presentation.qmd"
+      - "dfinal.Rda"
+      - ".github/workflows/render-presentation.yml"
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+
+      - name: Install R packages
+        run: |
+          Rscript -e "install.packages(c('dplyr', 'ggplot2', 'lubridate', 'scales', 'tidyr'), repos='https://cloud.r-project.org/')"
+
+      - name: Render Quarto presentation
+        run: |
+          quarto render 02-presentation.qmd
+
+      - name: Commit and push rendered HTML
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-rendered 02-presentation.html [GitHub Actions]"
+          file_pattern: 02-presentation.html
