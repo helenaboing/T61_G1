@@ -1,16 +1,136 @@
 ---
 title: "Análise de Vendas e Clientes"
 author: "Helena Boing, Alejandra Moreira, Joana Costa, Lohanna Pombo, Pedro Sequeira"
-format: revealjs
+format: 
+  revealjs:
+    theme: default
+    css: styles.css
+    slide-number: true
+    footer: "Análise de Vendas e Clientes"
+    background-transition: fade
+    transition: fade
+    highlight-style: github
+    code-fold: true
+    code-tools: true
+    code-link: true
+    code-copy: true
+    code-line-numbers: true
+    code-highlight: true
+    code-annotations: true
+    code-echo: false
+    code-eval: true
+    code-warning: true
+    code-error: true
+    code-message: false
+    code-output: true
+    code-cache: true
+    code-freeze: false
+    width: 1050
+    height: 700
+    margin: 0.1
+    center: false
+    navigationMode: linear
+    controlsLayout: edges
+    controlsTutorial: false
+    hash: true
+    history: true
+    hashOneBasedIndex: false
+    fragmentInURL: false
+    pdfSeparateFragments: false
+    lang: en
+    auto-stretch: true
+    header-includes:
+      - |
+        <style>
+          /* Geometric shapes in corners */
+          .reveal .slides section::before {
+            content: "";
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 100px;
+            height: 100px;
+            border: 2px solid rgba(70, 130, 180, 0.2);
+            border-radius: 50%;
+            z-index: -1;
+          }
+          
+          .reveal .slides section::after {
+            content: "";
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            border: 2px solid rgba(70, 130, 180, 0.2);
+            transform: rotate(45deg);
+            z-index: -1;
+          }
+          
+          /* Hexagon pattern in background */
+          .reveal .slides section {
+            background: 
+              linear-gradient(60deg, rgba(70, 130, 180, 0.05) 25%, transparent 25.5%, transparent 75%, rgba(70, 130, 180, 0.05) 75%, rgba(70, 130, 180, 0.05)),
+              linear-gradient(120deg, rgba(70, 130, 180, 0.05) 25%, transparent 25.5%, transparent 75%, rgba(70, 130, 180, 0.05) 75%, rgba(70, 130, 180, 0.05));
+            background-size: 60px 104px;
+            background-position: 0 0, 30px 52px;
+          }
+          
+          /* Decorative lines */
+          .reveal .slides section::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, 
+              rgba(70, 130, 180, 0.2),
+              rgba(70, 130, 180, 0.1),
+              rgba(70, 130, 180, 0.2));
+          }
+          
+          /* Title slide special styling */
+          .reveal .slides section:first-child::before {
+            width: 150px;
+            height: 150px;
+            border-width: 3px;
+          }
+          
+          .reveal .slides section:first-child::after {
+            width: 120px;
+            height: 120px;
+            border-width: 3px;
+          }
+          
+          /* Ensure content remains readable */
+          .reveal .slides section h1,
+          .reveal .slides section h2,
+          .reveal .slides section h3,
+          .reveal .slides section p {
+            position: relative;
+            z-index: 1;
+          }
+          
+          /* Add subtle animation to shapes */
+          @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          
+          .reveal .slides section::before {
+            animation: rotate 60s linear infinite;
+          }
+        </style>
 execute: 
-  echo: false #Show (TRUE) or hide (FALSE) the code in the knitted output.
-  eval: true #Run (TRUE) or skip (FALSE) code in the chunk.
-  warning: true #Show (TRUE) or suppress (FALSE) warnings in the output.
-  error: true #Show (TRUE) or suppress (FALSE) errors in the output. If FALSE, knitting stops on error.
-  message: false #Show (TRUE) or suppress (FALSE) messages (e.g., package startup messages) in the output.
-  output: true #Show (TRUE) or hide (FALSE) output from the chunk. (Not a standard knitr option; may refer to include.)
-  cache: true #Cache results so code isn't re-run if unchanged.
-  freeze: false #Prevents output from being updated on re-knit.
+  echo: false
+  eval: true
+  warning: true
+  error: true
+  message: false
+  output: true
+  cache: true
+  freeze: false
 ---
 
 ```{r setup, include=FALSE}
@@ -156,6 +276,87 @@ print(
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5)
+    )
+)
+```
+
+## Análise Específica dos Estados Unidos
+```{r}
+# Análise específica para os EUA
+USA_Result <- dfinal %>%
+  filter(CountryRegionName == "United States")
+
+sales_by_state <- USA_Result %>%
+  group_by(StateProvinceName) %>%
+  summarise(
+    TotalSales = sum(SalesAmount, na.rm = TRUE),
+    NumClientes = n_distinct(CustomerKey),
+    NumPedidos = n_distinct(SalesOrderNumber),
+    TicketMedio = TotalSales / NumPedidos
+  ) %>%
+  arrange(desc(TotalSales))
+
+# Top 5 estados dos EUA
+top5_states <- sales_by_state %>%
+  slice_max(TotalSales, n = 5)
+
+print(
+  ggplot(top5_states, aes(x = reorder(StateProvinceName, TotalSales), y = TotalSales)) +
+    geom_bar(stat = "identity", fill = "red") +
+    coord_flip() +
+    scale_y_continuous(labels = scales::comma) +
+    labs(
+      title = "Top 5 Estados dos EUA por Volume de Vendas",
+      x = "Estado",
+      y = "Total de Vendas (€)"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5)
+    )
+)
+```
+
+## Análise de Longevidade dos Clientes
+```{r}
+# Calcular métricas de longevidade
+clientes_longevidade <- dfinal %>%
+  distinct(CustomerKey, DateFirstPurchase) %>%
+  mutate(
+    DateFirstPurchase = as.Date(DateFirstPurchase),
+    TimeasCustomer_days = as.numeric(Sys.Date() - DateFirstPurchase),
+    TimeasCustomer_years = TimeasCustomer_days / 365.25,
+    Old_NewCustomer = ifelse(TimeasCustomer_days > 2675.5, "Old", "New")
+  )
+
+# Análise de vendas por tipo de cliente
+vendas_por_tipo_cliente <- dfinal %>%
+  inner_join(clientes_longevidade %>% select(CustomerKey, Old_NewCustomer), 
+             by = "CustomerKey",
+             relationship = "many-to-many") %>%
+  group_by(Old_NewCustomer) %>%
+  summarise(
+    TotalVendas = sum(SalesAmount),
+    NumClientes = n_distinct(CustomerKey),
+    TicketMedio = TotalVendas / NumClientes
+  )
+
+print(
+  ggplot(vendas_por_tipo_cliente, aes(x = Old_NewCustomer, y = TotalVendas, fill = Old_NewCustomer)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c("Old" = "darkblue", "New" = "lightblue")) +
+    labs(
+      title = "Volume de Vendas por Tipo de Cliente",
+      subtitle = "Comparação entre clientes antigos e novos",
+      x = "Tipo de Cliente",
+      y = "Total de Vendas (€)"
+    ) +
+    scale_y_continuous(labels = scales::comma) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5),
+      legend.position = "none"
     )
 )
 ```
@@ -324,7 +525,8 @@ oportunidades_mercado <- dfinal %>%
   arrange(desc(ScoreOportunidade))
 ```
 
-### Metodologia e Fatores de Avaliação
+::: {.smaller}
+## Metodologia e Fatores de Avaliação
 
 - **Número de Cidades** (40% do score)
   - Indica a cobertura geográfica e capacidade de expansão local
@@ -335,12 +537,14 @@ oportunidades_mercado <- dfinal %>%
 - **Vendas Anuais** (30% do score)
   - Avalia o volume de negócios e trajetória de crescimento
 
-```{=tex}
-\begin{align*}
-\text{Score de Oportunidade} = &(0.4 \times \text{cidades normalizado}) + \\
-&(0.3 \times \text{ticket médio normalizado}) + \\
-&(0.3 \times \text{vendas por ano normalizado})
-\end{align*}
+::: {.callout-note collapse="true"}
+Score de Oportunidade = (0.4 × cidades normalizado) + (0.3 × ticket médio normalizado) + (0.3 × vendas por ano normalizado)
+:::
+:::
+
+```{r}
+#| include: false
+# Remove any global equation definitions
 ```
 
 ## Critérios e Oportunidades
@@ -564,6 +768,7 @@ mapa_vendas <- mapa_base +
 print(mapa_vendas)
 ```
 
+::: {.smaller}
 ## Top 10 Cidades por Volume de Vendas
 ```{r}
 # Exibir métricas das top 10 cidades
@@ -581,6 +786,8 @@ vendas_por_cidade %>%
     format = "simple"
   )
 ```
+
+:::
 
 ## Vendas aceleram fortemente a partir de Q2 2018
 ```{r}
@@ -1100,3 +1307,228 @@ for (i in seq_along(resumo_rentabilidade)) {
   }
 }
 ```
+
+## Análise de Rentabilidade por Categoria e Subcategoria
+
+```{r}
+# Calcular rentabilidade por categoria
+profit_by_category <- dfinal %>%
+  group_by(ProductCategoryName) %>%
+  summarise(
+    MargemMedia = mean((SalesAmount - StandardCost) / SalesAmount * 100, na.rm = TRUE),
+    LucroTotal = sum(SalesAmount - StandardCost, na.rm = TRUE)
+  ) %>%
+  arrange(desc(MargemMedia))
+
+# Visualizar margens por categoria
+print(
+  ggplot(profit_by_category, aes(x = reorder(ProductCategoryName, MargemMedia), y = MargemMedia)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() +
+    labs(
+      title = "Margem Média por Categoria de Produto",
+      x = "Categoria",
+      y = "Margem Média (%)"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5)
+    )
+)
+```
+
+## Crescimento de Vendas por Subcategoria
+
+```{r}
+# Calcular crescimento por subcategoria
+growth_by_subcategory <- dfinal %>%
+  mutate(Ano = year(OrderDate)) %>%
+  group_by(ProductSubcategoryName, Ano) %>%
+  summarise(
+    QuantidadeTotal = sum(OrderQuantity),
+    ReceitaTotal = sum(SalesAmount),
+    LucroTotal = sum(SalesAmount - StandardCost),
+    .groups = "drop"
+  ) %>%
+  group_by(ProductSubcategoryName) %>%
+  mutate(
+    CrescimentoQuantidade = (QuantidadeTotal - lag(QuantidadeTotal)) / lag(QuantidadeTotal) * 100,
+    CrescimentoReceita = (ReceitaTotal - lag(ReceitaTotal)) / lag(ReceitaTotal) * 100,
+    CrescimentoLucro = (LucroTotal - lag(LucroTotal)) / lag(LucroTotal) * 100
+  ) %>%
+  filter(!is.na(CrescimentoReceita))
+
+# Visualizar top 5 subcategorias por crescimento de receita
+print(
+  growth_by_subcategory %>%
+    filter(Ano == max(Ano)) %>%
+    slice_max(CrescimentoReceita, n = 5) %>%
+    ggplot(aes(x = reorder(ProductSubcategoryName, CrescimentoReceita), 
+               y = CrescimentoReceita)) +
+    geom_col(fill = "#4CAF50") +
+    coord_flip() +
+    labs(
+      title = "Top 5 Subcategorias por Crescimento de Receita",
+      subtitle = paste("Ano:", max(growth_by_subcategory$Ano)),
+      x = "Subcategoria",
+      y = "Crescimento de Receita (%)"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+)
+```
+
+## Análise de Crescimento Detalhada
+
+```{r}
+# Calcular métricas de crescimento
+crescimento_metrics <- growth_by_subcategory %>%
+  filter(Ano == max(Ano)) %>%
+  summarise(
+    SubcategoriasCrescimento = sum(CrescimentoReceita > 0),
+    SubcategoriasDeclinio = sum(CrescimentoReceita < 0),
+    CrescimentoMedio = mean(CrescimentoReceita),
+    CrescimentoMaximo = max(CrescimentoReceita),
+    CrescimentoMinimo = min(CrescimentoReceita)
+  )
+
+# Exibir métricas
+cat("Métricas de Crescimento:\n")
+cat("Subcategorias em Crescimento:", crescimento_metrics$SubcategoriasCrescimento, "\n")
+cat("Subcategorias em Declínio:", crescimento_metrics$SubcategoriasDeclinio, "\n")
+cat("Crescimento Médio:", round(crescimento_metrics$CrescimentoMedio, 1), "%\n")
+cat("Crescimento Máximo:", round(crescimento_metrics$CrescimentoMaximo, 1), "%\n")
+cat("Crescimento Mínimo:", round(crescimento_metrics$CrescimentoMinimo, 1), "%\n")
+```
+
+## Top 10 Produtos por Crescimento de Lucro
+
+```{r}
+# Calcular crescimento por produto
+growth_by_product <- dfinal %>%
+  mutate(Ano = year(OrderDate)) %>%
+  group_by(ProductKey, ProductName, Ano) %>%
+  summarise(
+    QuantidadeTotal = sum(OrderQuantity),
+    ReceitaTotal = sum(SalesAmount),
+    LucroTotal = sum(SalesAmount - StandardCost),
+    .groups = "drop"
+  ) %>%
+  group_by(ProductKey) %>%
+  mutate(
+    CrescimentoLucro = (LucroTotal - lag(LucroTotal)) / lag(LucroTotal) * 100
+  ) %>%
+  filter(!is.na(CrescimentoLucro))
+
+# Visualizar top 10 produtos por crescimento de lucro
+print(
+  growth_by_product %>%
+    filter(Ano == max(Ano)) %>%
+    slice_max(CrescimentoLucro, n = 10) %>%
+    ggplot(aes(x = reorder(ProductName, CrescimentoLucro), 
+               y = CrescimentoLucro)) +
+    geom_col(fill = "darkgreen") +
+    coord_flip() +
+    labs(
+      title = "Top 10 Produtos por Crescimento de Lucro",
+      subtitle = paste("Ano:", max(growth_by_product$Ano)),
+      x = "Produto",
+      y = "Crescimento de Lucro (%)"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5),
+      axis.text.y = element_text(size = 8)
+    )
+)
+```
+
+## Proporção de Clientes com e sem Filhos
+```{r}
+customers <- dfinal %>%
+  mutate(TemFilhos = ifelse(NumberChildrenAtHome > 0, "Com filhos", "Sem filhos"))
+
+# Calcular percentuais
+
+dados_pizza <- customers %>%
+  count(TemFilhos) %>%
+  mutate(Percentual = round(n / sum(n) * 100, 1),
+         Label = paste0(TemFilhos, ": ", Percentual, "%"))
+
+# Criar o gráfico
+
+ggplot(dados_pizza, aes(x = "", y = n, fill = TemFilhos)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar("y") +
+  geom_text(aes(label = Label), position = position_stack(vjust = 0.5), color = "white", size = 5) +
+  labs(title = "Proporção de Clientes com e sem Filhos") +
+  theme_void() +
+  theme(legend.position = "none")
+```
+
+## Distribuição Salarial por Ocupação
+
+```{r}
+# Criar boxplot de salários por ocupação
+print(
+  ggplot(dfinal, aes(x = reorder(Occupation, YearlyIncome, FUN = median), 
+                     y = YearlyIncome)) +
+    geom_boxplot(fill = "steelblue", alpha = 0.7) +
+    coord_flip() +  # Inverter eixos para melhor legibilidade
+    labs(
+      title = "Distribuição Salarial por Ocupação",
+      subtitle = "Boxplot mostrando mediana, quartis e outliers",
+      x = "Ocupação",
+      y = "Salário Anual (€)"
+    ) +
+    scale_y_continuous(labels = scales::comma) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5),
+      axis.text.y = element_text(size = 10)
+    )
+)
+```
+
+## Estatísticas Salariais das Top 5 Ocupações
+
+```{r}
+# Calcular estatísticas resumidas por ocupação
+estatisticas_salario <- dfinal %>%
+  group_by(Occupation) %>%
+  summarise(
+    Mediana = median(YearlyIncome),
+    Media = mean(YearlyIncome),
+    Min = min(YearlyIncome),
+    Max = max(YearlyIncome),
+    Q1 = quantile(YearlyIncome, 0.25),
+    Q3 = quantile(YearlyIncome, 0.75),
+    NumClientes = n(),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(Mediana))
+
+# Exibir estatísticas das top 5 ocupações
+print(
+  head(estatisticas_salario, 5) %>%
+    mutate(
+      Mediana = round(Mediana, 2),
+      Media = round(Media, 2),
+      Min = round(Min, 2),
+      Max = round(Max, 2),
+      Q1 = round(Q1, 2),
+      Q3 = round(Q3, 2)
+    ) %>%
+    knitr::kable(
+      col.names = c("Ocupação", "Mediana", "Média", "Mínimo", "Máximo", "Q1", "Q3", "Nº Clientes"),
+      format = "simple"
+    )
+)
+```
+
+
