@@ -52,25 +52,27 @@ pyramid_data <- dfinal %>%
   )
 
 # Create the pyramid plot
-ggplot(pyramid_data, aes(x = FaixaIdade, y = n, fill = Gender)) +
-  geom_bar(stat = "identity") +
-  scale_fill_manual(values = c("Masculino" = "#4682B4", "Feminino" = "#FF69B4")) +
-  coord_flip() +
-  scale_y_continuous(
-    labels = function(x) abs(x),
-    breaks = pretty(pyramid_data$n)
-  ) +
-  labs(
-    title = "Pirâmide Demográfica dos Clientes",
-    x = "Faixa Etária",
-    y = "Número de Clientes",
-    fill = "Gênero"
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "bottom",
-    plot.title = element_text(hjust = 0.5, face = "bold")
-  )
+print(
+  ggplot(pyramid_data, aes(x = FaixaIdade, y = n, fill = Gender)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c("Masculino" = "#4682B4", "Feminino" = "#FF69B4")) +
+    coord_flip() +
+    scale_y_continuous(
+      labels = function(x) abs(x),
+      breaks = pretty(pyramid_data$n)
+    ) +
+    labs(
+      title = "Pirâmide Demográfica dos Clientes",
+      x = "Faixa Etária",
+      y = "Número de Clientes",
+      fill = "Gênero"
+    ) +
+    theme_minimal() +
+    theme(
+      legend.position = "bottom",
+      plot.title = element_text(hjust = 0.5, face = "bold")
+    )
+)
 ```
 
 ## Distribuição de Vendas por País
@@ -344,6 +346,155 @@ cat("Resumo de Penetração de Mercado:\n")
 for (i in seq_along(resumo_penetracao)) {
   cat(names(resumo_penetracao)[i], ":", resumo_penetracao[[i]], "\n")
 }
+```
+
+## Análise de Preço vs. Demanda por Produto
+
+```{r}
+# Preparar dados para o gráfico de bolhas
+produto_analise <- dfinal %>%
+  group_by(ProductKey, ProductName, ProductCategoryName) %>%
+  summarise(
+    PrecoMedio = mean(UnitPrice),
+    QuantidadeTotal = sum(OrderQuantity),
+    VendasTotais = sum(SalesAmount),
+    NumPedidos = n_distinct(SalesOrderNumber),
+    .groups = "drop"
+  ) %>%
+  # Remover outliers extremos para melhor visualização
+  filter(
+    PrecoMedio <= quantile(PrecoMedio, 0.95),
+    QuantidadeTotal <= quantile(QuantidadeTotal, 0.95)
+  )
+
+# Criar o gráfico de bolhas
+ggplot(produto_analise, 
+       aes(x = PrecoMedio, 
+           y = QuantidadeTotal,
+           size = VendasTotais,
+           color = ProductCategoryName)) +
+  geom_point(alpha = 0.6) +
+  scale_size_continuous(
+    name = "Vendas Totais (€)",
+    labels = scales::comma,
+    range = c(3, 15)
+  ) +
+  scale_color_brewer(
+    name = "Categoria",
+    palette = "Set1"
+  ) +
+  scale_x_continuous(
+    name = "Preço Médio Unitário (€)",
+    labels = scales::comma
+  ) +
+  scale_y_continuous(
+    name = "Quantidade Total Vendida",
+    labels = scales::comma
+  ) +
+  labs(
+    title = "Relação entre Preço, Demanda e Vendas por Produto",
+    subtitle = "Tamanho da bolha representa o valor total de vendas"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "right",
+    legend.box = "vertical"
+  )
+
+# Exibir métricas resumidas por categoria
+cat("\nMétricas por Categoria de Produto:\n")
+produto_analise %>%
+  group_by(ProductCategoryName) %>%
+  summarise(
+    PrecoMedio = mean(PrecoMedio),
+    QuantidadeMedia = mean(QuantidadeTotal),
+    VendasTotais = sum(VendasTotais),
+    NumProdutos = n(),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(VendasTotais)) %>%
+  mutate(
+    PrecoMedio = round(PrecoMedio, 2),
+    QuantidadeMedia = round(QuantidadeMedia, 0),
+    VendasTotais = round(VendasTotais, 2)
+  ) %>%
+  knitr::kable(
+    col.names = c("Categoria", "Preço Médio (€)", "Qtd. Média", "Vendas Totais (€)", "Nº Produtos"),
+    format = "simple"
+  )
+```
+
+## Distribuição Geográfica das Vendas
+
+```{r}
+# Preparar dados para o mapa
+vendas_por_cidade <- dfinal %>%
+  group_by(City, StateProvinceName, CountryRegionName) %>%
+  summarise(
+    TotalVendas = sum(SalesAmount),
+    NumClientes = n_distinct(CustomerKey),
+    NumPedidos = n_distinct(SalesOrderNumber),
+    .groups = "drop"
+  ) %>%
+  # Remover cidades com vendas muito baixas para melhor visualização
+  filter(TotalVendas > quantile(TotalVendas, 0.1))
+
+# Criar o mapa base
+mapa_base <- ggplot() +
+  borders("world", colour = "gray85", fill = "gray95") +
+  theme_void()
+
+# Adicionar as bolhas de vendas
+mapa_vendas <- mapa_base +
+  geom_point(
+    data = vendas_por_cidade,
+    aes(x = as.numeric(factor(StateProvinceName)), 
+        y = as.numeric(factor(CountryRegionName)),
+        size = TotalVendas,
+        color = NumClientes),
+    alpha = 0.6
+  ) +
+  scale_size_continuous(
+    name = "Total de Vendas (€)",
+    labels = scales::comma,
+    range = c(3, 15)
+  ) +
+  scale_color_gradient(
+    name = "Número de Clientes",
+    low = "blue",
+    high = "red"
+  ) +
+  labs(
+    title = "Distribuição Geográfica das Vendas",
+    subtitle = "Tamanho da bolha representa o volume de vendas, cor representa o número de clientes"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "right",
+    legend.box = "vertical"
+  )
+
+# Exibir o mapa
+print(mapa_vendas)
+
+# Exibir métricas das top 10 cidades
+cat("\nTop 10 Cidades por Volume de Vendas:\n")
+vendas_por_cidade %>%
+  arrange(desc(TotalVendas)) %>%
+  head(10) %>%
+  select(City, StateProvinceName, CountryRegionName, TotalVendas, NumClientes) %>%
+  mutate(
+    TotalVendas = round(TotalVendas, 2),
+    TotalVendas = scales::comma(TotalVendas)
+  ) %>%
+  knitr::kable(
+    col.names = c("Cidade", "Estado/Província", "País", "Total de Vendas (€)", "Nº de Clientes"),
+    format = "simple"
+  )
 ```
 
 ## Vendas aceleram fortemente a partir de Q2 2018
