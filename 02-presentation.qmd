@@ -562,7 +562,10 @@ mapa_vendas <- mapa_base +
 
 # Exibir o mapa
 print(mapa_vendas)
+```
 
+## Top 10 Cidades por Volume de Vendas
+```{r}
 # Exibir métricas das top 10 cidades
 cat("\nTop 10 Cidades por Volume de Vendas:\n")
 vendas_por_cidade %>%
