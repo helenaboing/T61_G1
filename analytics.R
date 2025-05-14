@@ -8,23 +8,6 @@ library(tinytex) # Gerar PDFs a partir de RMarkdown ou Quarto
 library(scales) # Formatação de números: comma(), percent()
 
 
-# ---- Preparação dos Dados ----
-# Adicionar variáveis necessárias para análise
-dfinal <- dfinal %>%
-    # Criar faixa etária
-    mutate(
-        FaixaIdade = cut(
-            Idade,
-            breaks = c(0, 18, 30, 45, 60, 150),
-            labels = c("0-18", "19-30", "31-45", "46-60", "60+"),
-            right = FALSE
-        ),
-        # Calcular lucro por venda
-        Lucro = SalesAmount - (StandardCost * OrderQuantity),
-        # Adicionar informações de tempo
-        Trimestre = paste0("Q", quarter(OrderDate), " ", year(OrderDate)),
-        Weekday = wday(OrderDate, label = TRUE, abbr = FALSE, locale = "pt_BR")
-    )
 
 # ---- Análise Demográfica dos Clientes ----
 # Distribuição etária
@@ -219,17 +202,60 @@ ggplot(cohort_retention, aes(x = CohortIndex, y = CohortMonth, fill = Retencao))
     ) +
     theme_minimal()
 
-dfinal <- dfinal %>%
-    mutate(
-        FaixaIdade = cut(
-            Idade,
-            breaks = c(0, 18, 30, 45, 60, 150),
-            labels = c("0-18", "19-30", "31-45", "46-60", "60+"),
-            right = FALSE
-        ),
-        Lucro = SalesAmount - (StandardCost * OrderQuantity),
-        Trimestre = paste0("Q", quarter(OrderDate), " ", year(OrderDate)),
-        Weekday = wday(OrderDate, label = TRUE, abbr = FALSE, locale = "pt_BR")
+ggplot(cohort_retention, aes(x = CohortIndex, y = CohortMonth, fill = Retencao)) +
+    geom_tile(color = "white") +
+    scale_fill_gradient(low = "#deebf7", high = "#3182bd", labels = percent) +
+    geom_text(aes(label = percent(Retencao, accuracy = 1)), size = 3, color = "black") +
+    labs(
+        title = "Análise de Cohorte: Retenção de Clientes",
+        x = "Meses desde a 1ª compra",
+        y = "Cohorte (Mês da 1ª compra)",
+        fill = "Retenção"
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Top 10 Produtos Mais Vendidos
+top10 <- dfinal %>%
+    group_by(ProductKey, ProductName) %>%
+    summarise(TotalQuantity = sum(OrderQuantity, na.rm = TRUE), .groups = "drop") %>%
+    slice_max(TotalQuantity, n = 10) %>%
+    arrange(TotalQuantity)
+
+ggplot(top10, aes(x = reorder(ProductName, TotalQuantity), y = TotalQuantity)) +
+    geom_col(fill = "darkgreen") +
+    coord_flip() +
+    labs(
+        title = "Top 10 Produtos Mais Vendidos",
+        x = "Produto",
+        y = "Quantidade Vendida"
+    ) +
+    theme_minimal() +
+    theme(
+        text = element_text(size = 14),
+        plot.title = element_text(face = "bold", hjust = 0.5)
     )
 
-save(dfinal, file = "dfinal.Rda")
+# Cohort Analysis (first 12 months for clarity)
+cohort_data <- dfinal %>%
+    group_by(CustomerKey) %>%
+    summarise(PrimeiraCompra = min(OrderDate, na.rm = TRUE), .groups = "drop") %>%
+    left_join(dfinal, by = "CustomerKey") %>%
+    mutate(
+        CohortMonth = floor_date(PrimeiraCompra, "month"),
+        OrderMonth = floor_date(OrderDate, "month"),
+        CohortIndex = interval(CohortMonth, OrderMonth) %/% months(1) + 1
+    ) %>%
+    filter(CohortIndex <= 12) # Show only first 12 months
+
+cohort_retention <- cohort_data %>%
+    group_by(CohortMonth, CohortIndex) %>%
+    summarise(UsuariosAtivos = n_distinct(CustomerKey), .groups = "drop") %>%
+    left_join(
+        cohort_data %>%
+            group_by(CohortMonth) %>%
+            summarise(CohortSize = n_distinct(CustomerKey), .groups = "drop"),
+        by = "CohortMonth"
+    ) %>%
+    mutate(Retencao = UsuariosAtivos / CohortSize)
+
