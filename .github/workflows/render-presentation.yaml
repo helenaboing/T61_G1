@@ -29,7 +29,7 @@ jobs:
 
       - name: Install R packages
         run: |
-          Rscript -e "install.packages(c('dplyr', 'ggplot2', 'lubridate', 'scales', 'tidyr'), repos='https://cloud.r-project.org/')"
+          Rscript -e "install.packages(c('dplyr', 'ggplot2', 'lubridate', 'scales', 'tidyr', 'knitr', 'rmarkdown'), repos='https://cloud.r-project.org/')"
 
       - name: Render Quarto presentation
         run: |
