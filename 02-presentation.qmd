@@ -94,7 +94,7 @@ print(
 )
 ```
 
-## Distribuição de Vendas por País
+## Estados Unidos e Austrália concentram a maior parte das vendas
 ```{r}
 # Análise por país
 vendas_por_pais <- dfinal %>%
@@ -125,7 +125,7 @@ print(
 )
 ```
 
-## Análise Regional Detalhada
+## Vendas são dominadas por Califórnia e estados australianos
 ```{r}
 # Análise por região/estado
 vendas_por_regiao <- dfinal %>%
@@ -160,7 +160,7 @@ print(
 )
 ```
 
-## Análise por Cidade
+## Londres e Paris lideram amplamente o volume de vendas entre as cidades
 ```{r}
 # Análise por cidade
 vendas_por_cidade <- dfinal %>%
@@ -214,7 +214,7 @@ for (i in seq_along(metricas_geograficas)) {
 }
 ```
 
-## Densidade de Clientes por Região
+## Paris lidera densidade de clientes, superando amplamente outras regiões
 ```{r}
 # Calcular densidade de clientes por região
 densidade_clientes <- dfinal %>%
@@ -250,7 +250,7 @@ print(
 )
 ```
 
-## Preferências Regionais por Categoria de Produto
+## Bikes dominam as vendas nas principais regiões
 ```{r}
 # Análise de preferências por categoria por região
 preferencias_categoria <- dfinal %>%
@@ -295,6 +295,7 @@ print(
 )
 ```
 
+## Potencial de Crescimento Regional: Identificação de Oportunidades Prioritárias
 ```{r}
 # Identificar mercados com potencial de crescimento
 oportunidades_mercado <- dfinal %>%
@@ -323,7 +324,36 @@ oportunidades_mercado <- dfinal %>%
   arrange(desc(ScoreOportunidade))
 ```
 
-## Top 10 Mercados com Maior Potencial de Crescimento
+### Metodologia e Fatores de Avaliação
+
+- **Número de Cidades** (40% do score)
+  - Indica a cobertura geográfica e capacidade de expansão local
+
+- **Ticket Médio** (30% do score)
+  - Mede o valor médio das transações e poder de compra dos clientes
+
+- **Vendas Anuais** (30% do score)
+  - Avalia o volume de negócios e trajetória de crescimento
+
+```{=tex}
+\begin{align*}
+\text{Score de Oportunidade} = &(0.4 \times \text{cidades normalizado}) + \\
+&(0.3 \times \text{ticket médio normalizado}) + \\
+&(0.3 \times \text{vendas por ano normalizado})
+\end{align*}
+```
+
+## Critérios e Oportunidades
+
+- ✓ Mínimo de 1 ano de operação
+- ✓ Dados normalizados para comparabilidade
+- ✓ Agregação por região (país/estado)
+- ✓ Filtro de operações recentes
+
+- 🎯 **Regiões Líderes**: Mercados mais promissores para expansão e investimentos
+- 📊 **Ranking Objetivo**: Facilita a alocação de recursos e decisões comerciais
+
+## Califórnia e Inglaterra lideram em potencial de crescimento entre mercados analisados
 ```{r}
 # Visualizar top 10 mercados com maior potencial
 print(
@@ -908,5 +938,162 @@ for (ano in anos) {
       )
   )
   cat("\n\n")
+}
+```
+
+## Margens por Categoria de Produto
+```{r}
+# Calcular métricas de rentabilidade por categoria
+margens_categoria <- dfinal %>%
+  group_by(ProductCategoryName) %>%
+  summarise(
+    VendasTotais = sum(SalesAmount),
+    CustoTotal = sum(StandardCost),
+    TaxasTotais = sum(TaxAmt),
+    FreteTotal = sum(Freight),
+    LucroBruto = VendasTotais - CustoTotal,
+    MargemBruta = (LucroBruto / VendasTotais) * 100,
+    MargemLiquida = ((LucroBruto - TaxasTotais - FreteTotal) / VendasTotais) * 100,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(MargemLiquida))
+
+# Visualizar margens por categoria
+print(
+  ggplot(margens_categoria, aes(x = reorder(ProductCategoryName, MargemLiquida))) +
+    geom_bar(aes(y = MargemLiquida), stat = "identity", fill = "steelblue", alpha = 0.7) +
+    geom_text(aes(y = MargemLiquida, label = paste0(round(MargemLiquida, 1), "%")),
+              vjust = -0.5, size = 3.5) +
+    labs(
+      title = "Margem Líquida por Categoria de Produto",
+      subtitle = "Percentual de lucro após custos diretos, taxas e frete",
+      x = "Categoria",
+      y = "Margem Líquida (%)"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5),
+      axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+)
+```
+
+## Análise de Custos Operacionais
+```{r}
+# Calcular métricas de custos operacionais
+custos_operacionais <- dfinal %>%
+  group_by(ProductCategoryName) %>%
+  summarise(
+    VendasTotais = sum(SalesAmount),
+    FreteTotal = sum(Freight),
+    TaxasTotais = sum(TaxAmt),
+    FretePorVenda = FreteTotal / VendasTotais * 100,
+    TaxasPorVenda = TaxasTotais / VendasTotais * 100,
+    .groups = "drop"
+  ) %>%
+  pivot_longer(
+    cols = c(FretePorVenda, TaxasPorVenda),
+    names_to = "TipoCusto",
+    values_to = "Percentual"
+  ) %>%
+  mutate(
+    TipoCusto = factor(TipoCusto,
+      levels = c("FretePorVenda", "TaxasPorVenda"),
+      labels = c("Frete", "Taxas")
+    )
+  )
+
+# Visualizar custos operacionais
+print(
+  ggplot(custos_operacionais, 
+         aes(x = reorder(ProductCategoryName, Percentual), 
+             y = Percentual, 
+             fill = TipoCusto)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    scale_fill_brewer(palette = "Set2") +
+    labs(
+      title = "Custos Operacionais por Categoria",
+      subtitle = "Percentual de frete e taxas sobre vendas",
+      x = "Categoria",
+      y = "Percentual sobre Vendas (%)",
+      fill = "Tipo de Custo"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "bottom"
+    )
+)
+```
+
+## Eficiência Operacional por Região
+```{r}
+# Calcular métricas de eficiência por região
+eficiencia_regional <- dfinal %>%
+  group_by(CountryRegionName, StateProvinceName) %>%
+  summarise(
+    VendasTotais = sum(SalesAmount),
+    FreteTotal = sum(Freight),
+    TaxasTotais = sum(TaxAmt),
+    NumPedidos = n_distinct(SalesOrderNumber),
+    FretePorPedido = FreteTotal / NumPedidos,
+    TaxasPorPedido = TaxasTotais / NumPedidos,
+    .groups = "drop"
+  ) %>%
+  # Filtrar regiões com volume significativo
+  filter(VendasTotais > quantile(VendasTotais, 0.1)) %>%
+  # Calcular score de eficiência (inverso dos custos)
+  mutate(
+    ScoreEficiencia = 1 / ((FretePorPedido + TaxasPorPedido) / VendasTotais)
+  ) %>%
+  arrange(desc(ScoreEficiencia))
+
+# Visualizar top 15 regiões por eficiência
+print(
+  ggplot(head(eficiencia_regional, 15),
+         aes(x = reorder(StateProvinceName, ScoreEficiencia),
+             y = ScoreEficiencia)) +
+    geom_bar(stat = "identity", fill = "darkgreen", alpha = 0.7) +
+    coord_flip() +
+    labs(
+      title = "Top 15 Regiões por Eficiência Operacional",
+      subtitle = "Score baseado em custos de frete e taxas por pedido",
+      x = "Região",
+      y = "Score de Eficiência"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+)
+```
+
+## Resumo de Rentabilidade e Eficiência
+```{r}
+# Calcular métricas resumidas
+resumo_rentabilidade <- list(
+  "Margem Bruta Média" = mean(margens_categoria$MargemBruta),
+  "Margem Líquida Média" = mean(margens_categoria$MargemLiquida),
+  "Custo de Frete Médio" = mean(custos_operacionais$Percentual[custos_operacionais$TipoCusto == "Frete"]),
+  "Custo de Taxas Médio" = mean(custos_operacionais$Percentual[custos_operacionais$TipoCusto == "Taxas"]),
+  "Categoria Mais Rentável" = margens_categoria$ProductCategoryName[1],
+  "Categoria Menos Rentável" = margens_categoria$ProductCategoryName[nrow(margens_categoria)],
+  "Região Mais Eficiente" = eficiencia_regional$StateProvinceName[1]
+)
+
+# Exibir resumo
+cat("Resumo de Rentabilidade e Eficiência:\n")
+for (i in seq_along(resumo_rentabilidade)) {
+  if (grepl("Média", names(resumo_rentabilidade)[i])) {
+    cat(names(resumo_rentabilidade)[i], ":", 
+        round(resumo_rentabilidade[[i]], 1), "%\n")
+  } else {
+    cat(names(resumo_rentabilidade)[i], ":", 
+        resumo_rentabilidade[[i]], "\n")
+  }
 }
 ```
