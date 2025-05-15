@@ -111,16 +111,6 @@ format:
             position: relative;
             z-index: 1;
           }
-          
-          /* Add subtle animation to shapes */
-          @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          
-          .reveal .slides section::before {
-            animation: rotate 60s linear infinite;
-          }
         </style>
 execute: 
   echo: false
