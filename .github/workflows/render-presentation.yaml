@@ -4,8 +4,8 @@ on:
   push:
     paths:
       - "02-presentation.qmd"
-      - "dfinal.Rda"
-      - ".github/workflows/render-presentation.yml"
+      - "01-preparar-dados.R"
+      - ".github/workflows/render-presentation.yaml"
   workflow_dispatch:
 
 jobs:
@@ -29,7 +29,11 @@ jobs:
 
       - name: Install R packages
         run: |
-          Rscript -e "install.packages(c('dplyr', 'ggplot2', 'lubridate', 'scales', 'tidyr', 'knitr', 'rmarkdown'), repos='https://cloud.r-project.org/')"
+          Rscript -e "install.packages(c('dplyr', 'ggplot2', 'lubridate', 'scales', 'tidyr', 'knitr', 'rmarkdown', 'readr', 'readxl', 'tinytex'), repos='https://cloud.r-project.org/')"
+
+      - name: Prepare data
+        run: |
+          Rscript 01-preparar-dados.R
 
       - name: Render Quarto presentation
         run: |
